@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="fr" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pêche Tanger</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Pêche Tanger">
+<meta name="theme-color" content="#0b6e99">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+:root{--bg:#f2f4f7;--card:#fff;--text:#111;--muted:#6b7280;--accent:#0b6e99;--green:#16a34a;--orange:#ea8a0c;--red:#dc2626;--line:#e5e7eb}
+@media (prefers-color-scheme:dark){:root{--bg:#0f1115;--card:#1b1e24;--text:#f3f4f6;--muted:#9ca3af;--line:#2a2e36}}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:16px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Tahoma,sans-serif}
+header{position:fixed;top:0;left:0;right:0;z-index:1000;display:flex;align-items:center;gap:8px;padding:calc(env(safe-area-inset-top) + 8px) 14px 8px;background:var(--card);border-bottom:1px solid var(--line)}
+header h1{font-size:17px;margin:0;flex:1}
+.iconbtn{border:0;background:none;color:var(--accent);font-size:20px;padding:6px 8px;cursor:pointer}
+.langbtn{border:1px solid var(--accent);color:var(--accent);background:none;border-radius:999px;padding:4px 12px;font-weight:600}
+main{position:fixed;top:calc(env(safe-area-inset-top) + 50px);bottom:calc(env(safe-area-inset-bottom) + 58px);left:0;right:0}
+.view{position:absolute;inset:0;overflow-y:auto;display:none;padding:12px}
+.view.active{display:block}
+#view-map{padding:0}
+#map{position:absolute;inset:0}
+nav{position:fixed;bottom:0;left:0;right:0;z-index:1000;display:flex;background:var(--card);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
+nav button{flex:1;border:0;background:none;color:var(--muted);padding:8px 0 6px;font-size:11px;display:flex;flex-direction:column;align-items:center;gap:2px}
+nav button span{font-size:21px}
+nav button.active{color:var(--accent)}
+.card{background:var(--card);border-radius:14px;padding:14px;margin-bottom:12px}
+.card h3{margin:0 0 8px;font-size:13px;text-transform:uppercase;letter-spacing:.03em;color:var(--muted)}
+.row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}
+.row:last-child{border-bottom:0}
+.row .grow{flex:1;min-width:0}
+.sub{font-size:13px;color:var(--muted)}
+.badge{font-size:13px;font-weight:700;padding:3px 9px;border-radius:999px;white-space:nowrap}
+.g{color:var(--green);background:#16a34a22}.o{color:var(--orange);background:#ea8a0c22}.r{color:var(--red);background:#dc262622}.n{color:var(--muted);background:#8882}
+.pin{width:34px;height:34px;border-radius:50%;border:2px solid #fff;box-shadow:0 1px 4px #0006;display:flex;align-items:center;justify-content:center;font-size:16px;position:relative}
+.pin b{position:absolute;top:-9px;right:-12px;background:#fff;color:#000;font-size:10px;padding:0 4px;border-radius:8px;box-shadow:0 1px 2px #0004}
+.legend{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);z-index:500;background:var(--card);border-radius:999px;padding:6px 14px;font-size:12px;display:flex;gap:12px;box-shadow:0 2px 8px #0003;white-space:nowrap}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-inline-end:4px;vertical-align:middle}
+.fab{position:absolute;z-index:500;right:12px;width:46px;height:46px;border-radius:50%;border:0;background:var(--card);color:var(--accent);font-size:22px;box-shadow:0 2px 8px #0004}
+#cross{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:600;font-size:44px;color:var(--accent);pointer-events:none;display:none}
+#addbar{position:absolute;left:12px;right:12px;bottom:12px;z-index:600;display:none}
+.btn{display:block;width:100%;border:0;border-radius:12px;padding:12px;font-size:16px;font-weight:600;background:var(--accent);color:#fff;text-align:center;text-decoration:none;cursor:pointer}
+.btn.sec{background:#0b6e9922;color:var(--accent)}.btn.del{background:#dc262622;color:var(--red)}
+.sheet{position:fixed;inset:0;z-index:2000;background:var(--bg);overflow-y:auto;display:none;padding:calc(env(safe-area-inset-top) + 8px) 12px calc(env(safe-area-inset-bottom) + 16px)}
+.sheet.open{display:block}
+.sheethead{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.sheethead h2{flex:1;margin:0;font-size:20px}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.cell{text-align:center;padding:8px 2px;border-radius:10px;background:var(--bg)}
+.cell .ic{font-size:18px}.cell .v{font-weight:700;font-size:14px}.cell .l{font-size:11px;color:var(--muted)}
+.score{display:flex;align-items:center;gap:14px;margin-bottom:12px}
+.ring{width:72px;height:72px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:800}
+.fac{padding:4px 0;font-size:14px}
+.danger{background:#dc262622;color:var(--red);font-weight:600}
+details{border-bottom:1px solid var(--line);padding:10px 0}details:last-child{border:0}
+summary{font-weight:600;cursor:pointer}
+details p{margin:8px 0 0;font-size:14px}
+label.f{display:block;margin:10px 0 4px;font-size:13px;color:var(--muted)}
+input[type=text],select{width:100%;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--text);font-size:16px}
+.chk{display:flex;align-items:center;gap:8px;padding:6px 0}
+.seg{display:flex;gap:8px}.seg button{flex:1;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--text);font-size:16px}
+.seg button.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+svg text{fill:var(--muted);font-size:10px}
+.leaflet-container{font:inherit}
+[dir=rtl] .fab{right:auto;left:12px}
+</style>
+</head>
+<body>
+<header>
+  <h1 id="title">🎣 Pêche Tanger</h1>
+  <button class="iconbtn" id="refresh" title="↻">↻</button>
+  <button class="langbtn" id="langbtn">ع</button>
+</header>
+
+<main>
+  <section class="view active" id="view-map">
+    <div id="map" dir="ltr"></div>
+    <div id="cross">⊕</div>
+    <button class="fab" id="locate" style="top:12px">➤</button>
+    <button class="fab" id="addbtn" style="top:66px">＋</button>
+    <div class="legend" id="legend"></div>
+    <div id="addbar" class="card"></div>
+  </section>
+  <section class="view" id="view-when"></section>
+  <section class="view" id="view-tips"></section>
+  <section class="view" id="view-settings"></section>
+</main>
+
+<nav id="tabs"></nav>
+<div class="sheet" id="sheet"></div>
+<div class="sheet" id="addsheet"></div>
+
+<script>
+const I18N = {"tab.map": {"fr": "Carte", "ar": "الخريطة"}, "tab.when": {"fr": "Quand & où", "ar": "متى وأين"}, "tab.tips": {"fr": "Conseils", "ar": "نصائح"}, "tab.settings": {"fr": "Réglages", "ar": "الإعدادات"}, "map.title": {"fr": "Spots de pêche", "ar": "أماكن الصيد"}, "map.add": {"fr": "Ajouter un spot", "ar": "إضافة مكان"}, "map.addHint": {"fr": "Déplacez la carte pour placer le viseur sur votre spot.", "ar": "حرّك الخريطة لوضع المؤشر على مكانك."}, "map.addHere": {"fr": "Ajouter ici", "ar": "أضف هنا"}, "map.restricted": {"fr": "Zone portuaire – pêche interdite", "ar": "منطقة مينائية – الصيد ممنوع"}, "score.good": {"fr": "Favorable", "ar": "مناسب"}, "score.medium": {"fr": "Moyen", "ar": "متوسط"}, "score.bad": {"fr": "Défavorable", "ar": "غير مناسب"}, "add.title": {"fr": "Nouveau spot", "ar": "مكان جديد"}, "add.namePlaceholder": {"fr": "Nom du spot", "ar": "اسم المكان"}, "add.type": {"fr": "Type", "ar": "النوع"}, "add.coast": {"fr": "Côte", "ar": "الساحل"}, "add.save": {"fr": "Enregistrer", "ar": "حفظ"}, "common.cancel": {"fr": "Annuler", "ar": "إلغاء"}, "spot.type.rocks": {"fr": "Rochers", "ar": "صخور"}, "spot.type.beach": {"fr": "Plage", "ar": "شاطئ"}, "spot.type.jetty": {"fr": "Digue / jetée", "ar": "حاجز / رصيف"}, "spot.type.estuary": {"fr": "Estuaire", "ar": "مصب نهر"}, "coast.atlantic": {"fr": "Atlantique", "ar": "الأطلسي"}, "coast.mediterranean": {"fr": "Détroit / Méditerranée", "ar": "المضيق / المتوسط"}, "species.seaBass": {"fr": "Bar (loup)", "ar": "القاروص (الدرعي)"}, "species.seaBream": {"fr": "Dorade", "ar": "الدنيس (الدوراد)"}, "species.whiteBream": {"fr": "Sar", "ar": "الشرغو"}, "species.mackerel": {"fr": "Maquereau", "ar": "الإسقمري (الكابايلا)"}, "species.squid": {"fr": "Calamar / seiche", "ar": "الكلمار / السيبيا"}, "detail.species": {"fr": "Espèces", "ar": "الأنواع"}, "detail.danger": {"fr": "Conditions dangereuses : mer forte ou rafales violentes. Évitez les rochers.", "ar": "ظروف خطيرة: بحر هائج أو رياح قوية. تجنّب الصخور."}, "detail.now": {"fr": "Maintenant", "ar": "الآن"}, "detail.score": {"fr": "Indice de pêche", "ar": "مؤشر الصيد"}, "detail.factors": {"fr": "Pourquoi ce score", "ar": "لماذا هذا التقييم"}, "detail.forecast": {"fr": "Indice sur 72 h", "ar": "المؤشر خلال 72 ساعة"}, "detail.windows": {"fr": "Meilleurs créneaux", "ar": "أفضل الأوقات"}, "detail.noWindow": {"fr": "Aucun créneau favorable dans les 72 h.", "ar": "لا توجد فترة مناسبة خلال 72 ساعة."}, "detail.tips": {"fr": "Conseils pour maintenant", "ar": "نصائح للآن"}, "detail.retry": {"fr": "Réessayer", "ar": "أعد المحاولة"}, "detail.loading": {"fr": "Chargement de la météo…", "ar": "جارٍ تحميل الطقس…"}, "detail.directions": {"fr": "Itinéraire", "ar": "الاتجاهات"}, "detail.delete": {"fr": "Supprimer ce spot", "ar": "حذف هذا المكان"}, "detail.temp": {"fr": "Air", "ar": "الهواء"}, "detail.wind": {"fr": "Vent", "ar": "الرياح"}, "detail.gusts": {"fr": "Rafales", "ar": "الهبات"}, "detail.waves": {"fr": "Vagues", "ar": "الأمواج"}, "detail.period": {"fr": "Période", "ar": "الدورة"}, "detail.seaTemp": {"fr": "Eau", "ar": "الماء"}, "detail.pressure": {"fr": "Pression", "ar": "الضغط"}, "detail.rain": {"fr": "Pluie", "ar": "المطر"}, "detail.moon": {"fr": "Lune", "ar": "القمر"}, "best.top": {"fr": "Meilleur choix", "ar": "أفضل اختيار"}, "best.ranking": {"fr": "Classement des spots (48 h)", "ar": "ترتيب الأماكن (48 ساعة)"}, "best.none": {"fr": "Pas de créneau favorable", "ar": "لا توجد فترة مناسبة"}, "best.footer": {"fr": "Tirez vers le bas pour actualiser. L'indice combine vent, vagues, pression, lumière, pluie et lune.", "ar": "اسحب للأسفل للتحديث. المؤشر يجمع الرياح والأمواج والضغط والضوء والمطر والقمر."}, "f.wind.calm": {"fr": "Vent faible (< 10 km/h)", "ar": "رياح ضعيفة (أقل من 10 كم/س)"}, "f.wind.light": {"fr": "Vent léger", "ar": "رياح خفيفة"}, "f.wind.moderate": {"fr": "Vent modéré", "ar": "رياح معتدلة"}, "f.wind.strong": {"fr": "Vent fort", "ar": "رياح قوية"}, "f.wind.veryStrong": {"fr": "Vent très fort", "ar": "رياح قوية جداً"}, "f.gusts": {"fr": "Rafales > 50 km/h", "ar": "هبات تتجاوز 50 كم/س"}, "f.chergui.exposed": {"fr": "Chergui (vent d'est) : côte exposée", "ar": "الشرقي: الساحل مكشوف"}, "f.gharbi.exposed": {"fr": "Gharbi (vent d'ouest) : côte exposée", "ar": "الغربي: الساحل مكشوف"}, "f.wind.sheltered": {"fr": "Côte abritée du vent dominant", "ar": "الساحل محمي من الرياح السائدة"}, "f.waves.danger": {"fr": "Mer dangereuse (> 2,5 m)", "ar": "بحر خطير (أكثر من 2.5 م)"}, "f.waves.rough": {"fr": "Mer agitée", "ar": "بحر مضطرب"}, "f.waves.ideal": {"fr": "Mer formée idéale (0,5–1,5 m)", "ar": "أمواج مثالية (0.5–1.5 م)"}, "f.waves.calm": {"fr": "Mer calme", "ar": "بحر هادئ"}, "f.pressure.falling": {"fr": "Pression en légère baisse", "ar": "انخفاض خفيف في الضغط"}, "f.pressure.dropFast": {"fr": "Chute rapide de pression", "ar": "انخفاض سريع في الضغط"}, "f.pressure.rising": {"fr": "Pression en forte hausse", "ar": "ارتفاع قوي في الضغط"}, "f.pressure.stable": {"fr": "Pression stable", "ar": "ضغط مستقر"}, "f.light.golden": {"fr": "Aube / crépuscule", "ar": "الفجر / الغروب"}, "f.light.night": {"fr": "Nuit", "ar": "الليل"}, "f.light.harsh": {"fr": "Plein soleil", "ar": "شمس ساطعة"}, "f.cloudy": {"fr": "Ciel couvert", "ar": "سماء غائمة"}, "f.rain.heavy": {"fr": "Forte pluie", "ar": "أمطار غزيرة"}, "f.rain.light": {"fr": "Pluie légère", "ar": "أمطار خفيفة"}, "f.moon.spring": {"fr": "Nouvelle/pleine lune : fortes marées", "ar": "محاق/بدر: مد وجزر قوي"}, "ctx.danger": {"fr": "Ne vous approchez pas des rochers battus par les vagues. Reportez la sortie.", "ar": "لا تقترب من الصخور التي تضربها الأمواج. أجّل الخرجة."}, "ctx.wind.strong": {"fr": "Vent fort : choisissez un spot dos au vent et montez des plombs plus lourds.", "ar": "رياح قوية: اختر مكاناً يكون فيه الريح خلفك واستعمل رصاصاً أثقل."}, "ctx.chergui": {"fr": "Chergui (est) : la côte atlantique (Cap Spartel, Achakar) est mieux abritée.", "ar": "الشرقي: ساحل الأطلسي (سبارطيل، أشقار) أكثر حماية."}, "ctx.gharbi": {"fr": "Gharbi (ouest) : préférez la côte du détroit (Malabata, Ksar Sghir, Dalia).", "ar": "الغربي: فضّل ساحل المضيق (ملاباطا، القصر الصغير، الداليا)."}, "ctx.waves.ideal": {"fr": "Mer formée : idéal pour le bar au leurre ou en surfcasting au bord de l'écume.", "ar": "أمواج متوسطة: مثالية للقاروص بالطعم الاصطناعي أو بالرمي قرب الزبد."}, "ctx.waves.calm": {"fr": "Mer calme : pêche fine (bas de ligne fin), sar et dorade au flotteur ou au fond léger.", "ar": "بحر هادئ: صيد دقيق بخيط رفيع، الشرغو والدنيس بالعوامة أو بالقاع الخفيف."}, "ctx.pressure.falling": {"fr": "Pression en baisse : les poissons s'alimentent souvent avant une perturbation.", "ar": "انخفاض الضغط: الأسماك غالباً تتغذى قبل الاضطراب الجوي."}, "ctx.golden": {"fr": "Aube ou crépuscule : c'est le meilleur moment, soyez en place avant.", "ar": "الفجر أو الغروب: أفضل وقت، كن في مكانك قبله."}, "ctx.night": {"fr": "Nuit : turluttes (egi) sous les lumières pour le calamar.", "ar": "الليل: استعمل الإيجي تحت الأضواء لصيد الكلمار."}, "ctx.cloudy": {"fr": "Ciel couvert : poissons moins méfiants, essayez des leurres sombres.", "ar": "سماء غائمة: الأسماك أقل حذراً، جرّب طعوماً داكنة."}, "ctx.sunny": {"fr": "Plein soleil : cherchez la profondeur et l'ombre, ou attendez le soir.", "ar": "شمس ساطعة: ابحث عن العمق والظل أو انتظر المساء."}, "ctx.coldWater": {"fr": "Eau froide : animations lentes et appâts naturels.", "ar": "ماء بارد: حركات بطيئة وطعم طبيعي."}, "ctx.default": {"fr": "Conditions moyennes : variez appâts et profondeurs.", "ar": "ظروف متوسطة: نوّع الطعم والأعماق."}, "moon.new": {"fr": "Nouvelle", "ar": "محاق"}, "moon.waxingCrescent": {"fr": "Croissant", "ar": "هلال متزايد"}, "moon.firstQuarter": {"fr": "1er quartier", "ar": "تربيع أول"}, "moon.waxingGibbous": {"fr": "Gibbeuse croiss.", "ar": "أحدب متزايد"}, "moon.full": {"fr": "Pleine", "ar": "بدر"}, "moon.waningGibbous": {"fr": "Gibbeuse décr.", "ar": "أحدب متناقص"}, "moon.lastQuarter": {"fr": "Dernier quartier", "ar": "تربيع أخير"}, "moon.waningCrescent": {"fr": "Dernier croissant", "ar": "هلال متناقص"}, "dir.N": {"fr": "N", "ar": "ش"}, "dir.NE": {"fr": "NE", "ar": "ش.ق"}, "dir.E": {"fr": "E", "ar": "ق"}, "dir.SE": {"fr": "SE", "ar": "ج.ق"}, "dir.S": {"fr": "S", "ar": "ج"}, "dir.SW": {"fr": "SO", "ar": "ج.غ"}, "dir.W": {"fr": "O", "ar": "غ"}, "dir.NW": {"fr": "NO", "ar": "ش.غ"}, "day.today": {"fr": "Aujourd'hui", "ar": "اليوم"}, "day.tomorrow": {"fr": "Demain", "ar": "غداً"}, "tips.reading.title": {"fr": "Lire l'indice", "ar": "قراءة المؤشر"}, "tips.reading.text": {"fr": "Vert (≥ 65) : sortez ! Orange : possible avec la bonne technique. Rouge : peu productif ou dangereux. Les créneaux proposés regroupent les heures vertes consécutives.", "ar": "أخضر (65 فأكثر): اخرج للصيد! برتقالي: ممكن بالتقنية المناسبة. أحمر: ضعيف أو خطير. الأوقات المقترحة تجمع الساعات الخضراء المتتالية."}, "tips.species.title": {"fr": "Par espèce", "ar": "حسب النوع"}, "tip.seaBass": {"fr": "Automne–hiver surtout. Mer formée et écume, à l'aube, au crépuscule et la nuit. Poissons nageurs, leurres souples, ou ver/sardine en surfcasting. Rochers, plages, estuaires.", "ar": "خاصة في الخريف والشتاء. بحر متحرك وزبد، عند الفجر والغروب وليلاً. طعوم اصطناعية سابحة أو لينة، أو دود/سردين بالرمي. الصخور والشواطئ والمصبات."}, "tip.seaBream": {"fr": "Printemps à automne. Eau plutôt calme et claire, fonds sableux ou mixtes. Crabe, couteau, ver. Pêche au fond, ferrage franc.", "ar": "من الربيع إلى الخريف. ماء هادئ وصافٍ، قاع رملي أو مختلط. سلطعون، موس البحر، دود. صيد بالقاع مع جذب حازم."}, "tip.whiteBream": {"fr": "Toute l'année près des rochers, surtout en eau légèrement remuée. Moule, crevette, ver. Flotteur ou fond léger, bas de ligne fin.", "ar": "طوال السنة قرب الصخور، خاصة في ماء متحرك قليلاً. بلح البحر، قمرون، دود. عوامة أو قاع خفيف بخيط رفيع."}, "tip.mackerel": {"fr": "Été surtout, en bancs près de la surface, le matin. Mitraillette (plumes) ou petits leurres métalliques depuis les digues.", "ar": "خاصة في الصيف، أسراب قرب السطح صباحاً. سلسلة الريش أو طعوم معدنية صغيرة من الحواجز."}, "tip.squid": {"fr": "Automne–hiver, la nuit, en eau claire. Turluttes (egi) animées lentement, sous les lumières des jetées.", "ar": "الخريف والشتاء، ليلاً، في ماء صافٍ. إيجي بحركة بطيئة تحت أضواء الأرصفة."}, "tips.wind.title": {"fr": "Les vents du détroit", "ar": "رياح المضيق"}, "tips.wind.text": {"fr": "Chergui (est/levante) : la côte méditerranéenne prend le vent, l'Atlantique est plus abrité. Gharbi (ouest/poniente) : l'inverse. Choisissez toujours une côte où le vent vient de la terre.", "ar": "الشرقي: ساحل المتوسط يتعرض للريح والأطلسي أكثر حماية. الغربي: العكس. اختر دائماً ساحلاً تأتي فيه الريح من البر."}, "tips.gear.title": {"fr": "Matériel de base", "ar": "المعدات الأساسية"}, "tips.gear.text": {"fr": "Canne 3–4,5 m pour rochers/plage, moulinet 4000–5000, tresse 0,14–0,18 + bas de ligne fluoro. Plombs 60–150 g selon le courant. Lampe frontale, gants, bottes antidérapantes.", "ar": "قصبة 3–4.5 م للصخور والشاطئ، بكرة 4000–5000، خيط مضفور 0.14–0.18 مع خيط فلورو. رصاص 60–150 غ حسب التيار. مصباح رأس، قفازات، أحذية مانعة للانزلاق."}, "tips.safety.title": {"fr": "Sécurité", "ar": "السلامة"}, "tips.safety.text": {"fr": "Ne pêchez jamais seul sur les rochers par mer forte. Surveillez la marée montante, gardez une voie de repli, portez des chaussures antidérapantes et prévenez un proche.", "ar": "لا تصطد وحدك على الصخور في بحر هائج. راقب المد، احتفظ بطريق للعودة، البس حذاءً مانعاً للانزلاق وأخبر أحد أقاربك."}, "tips.rules.title": {"fr": "Réglementation", "ar": "القوانين"}, "tips.rules.text": {"fr": "Respectez les tailles minimales, les zones portuaires et militaires interdites et les périodes de repos biologique. Renseignez-vous auprès du Département de la Pêche Maritime avant de pêcher.", "ar": "احترم الأحجام الدنيا والمناطق المينائية والعسكرية الممنوعة وفترات الراحة البيولوجية. استفسر لدى قطاع الصيد البحري قبل الصيد."}, "settings.language": {"fr": "Langue", "ar": "اللغة"}, "settings.about": {"fr": "À propos", "ar": "حول التطبيق"}, "settings.aboutText": {"fr": "Pêche Tanger calcule un indice de pêche du bord pour chaque spot à partir des prévisions météo et marines.", "ar": "يحسب تطبيق صيد طنجة مؤشراً للصيد من الشاطئ لكل مكان انطلاقاً من توقعات الطقس والبحر."}, "settings.data": {"fr": "Météo et mer : Open-Meteo.com (gratuit, sans compte).", "ar": "الطقس والبحر: Open-Meteo.com (مجاني وبدون حساب)."}, "settings.disclaimer": {"fr": "Spots et zones interdites indicatifs. Vérifiez toujours la réglementation et l'accès sur place.", "ar": "الأماكن والمناطق الممنوعة تقريبية. تحقق دائماً من القوانين وإمكانية الوصول في عين المكان."}, "settings.resetCustom": {"fr": "Supprimer mes spots personnels", "ar": "حذف أماكني الشخصية"}, "map.locate": {"fr": "Ma position", "ar": "موقعي"}, "common.close": {"fr": "Fermer", "ar": "إغلاق"}, "install.title": {"fr": "Installer sur l'iPhone", "ar": "التثبيت على الآيفون"}, "install.text": {"fr": "Dans Safari : bouton Partager ⬆︎ puis « Sur l'écran d'accueil ».", "ar": "في سفاري: زر المشاركة ⬆︎ ثم «إضافة إلى الشاشة الرئيسية»."}, "detail.error": {"fr": "Impossible de charger la météo (connexion ?).", "ar": "تعذّر تحميل الطقس (الاتصال؟)."}, "settings.updated": {"fr": "Dernière mise à jour", "ar": "آخر تحديث"}};
+const LS = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+};
+let lang = LS.get('lang', 'fr');
+const t = k => (I18N[k] && (I18N[k][lang] || I18N[k].fr)) || k;
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+// ---------- Données ----------
+const SPECIES = ['seaBass','seaBream','whiteBream','mackerel','squid'];
+const TYPES = ['rocks','beach','jetty','estuary'];
+const COASTS = ['atlantic','mediterranean'];
+const TYPE_ICON = {rocks:'🪨', beach:'🏖️', jetty:'🛤️', estuary:'🌊'};
+const DEFAULT_SPOTS = [
+  {id:'s1', name:{fr:"Cap Spartel", ar:"رأس سبارطيل"}, lat:35.7905, lon:-5.9235, type:'rocks', coast:'atlantic', species:['seaBass','whiteBream','seaBream'],
+   notes:{fr:"Rochers sous le phare. Très exposé à la houle atlantique : prudence.", ar:"صخور تحت المنارة. مكشوف لأمواج الأطلسي: الحذر واجب."}},
+  {id:'s2', name:{fr:"Achakar – Grottes d'Hercule", ar:"أشقار – مغارة هرقل"}, lat:35.7590, lon:-5.9385, type:'beach', coast:'atlantic', species:['seaBass','seaBream'],
+   notes:{fr:"Grande plage de sable : surfcasting, bar dans l'écume.", ar:"شاطئ رملي كبير: صيد بالرمي من الشاطئ، القاروص في الزبد."}},
+  {id:'s3', name:{fr:"Cap Malabata", ar:"رأس ملاباطا"}, lat:35.8160, lon:-5.7450, type:'rocks', coast:'mediterranean', species:['whiteBream','seaBass','squid'],
+   notes:{fr:"Côte rocheuse côté détroit, abritée par vent d'ouest.", ar:"ساحل صخري جهة المضيق، محمي عند هبوب الرياح الغربية."}},
+  {id:'s4', name:{fr:"Ksar Sghir", ar:"القصر الصغير"}, lat:35.8450, lon:-5.5580, type:'beach', coast:'mediterranean', species:['seaBream','seaBass','mackerel'],
+   notes:{fr:"Plage et embouchure de l'oued : dorade et bar.", ar:"شاطئ ومصب الوادي: الدنيس والقاروص."}},
+  {id:'s5', name:{fr:"Dalia", ar:"الداليا"}, lat:35.9030, lon:-5.4720, type:'rocks', coast:'mediterranean', species:['whiteBream','squid','mackerel'],
+   notes:{fr:"Eau claire, bon spot à céphalopodes la nuit en automne-hiver.", ar:"مياه صافية، مكان جيد للكلمار ليلاً في الخريف والشتاء."}},
+  {id:'s6', name:{fr:"Asilah – Digue", ar:"أصيلة – الحاجز"}, lat:35.4700, lon:-6.0360, type:'jetty', coast:'atlantic', species:['mackerel','whiteBream','squid'],
+   notes:{fr:"Digue extérieure : vérifiez que l'accès est autorisé.", ar:"الحاجز الخارجي: تأكد أن الدخول مسموح."}},
+  {id:'s7', name:{fr:"Larache – Embouchure du Loukkos", ar:"العرائش – مصب اللوكوس"}, lat:35.2010, lon:-6.1530, type:'estuary', coast:'atlantic', species:['seaBass','seaBream'],
+   notes:{fr:"Estuaire : le bar chasse à la marée, surtout à l'aube.", ar:"مصب: القاروص يصطاد مع المد، خاصة عند الفجر."}},
+];
+const ZONES = [
+  {lat:35.8850, lon:-5.5000, r:3000},
+  {lat:35.7870, lon:-5.8070, r:1200},
+];
+let custom = LS.get('customSpots', []);
+const allSpots = () => DEFAULT_SPOTS.concat(custom);
+const spotName = s => s.name[lang] || s.name.fr;
+const spotNotes = s => s.notes ? (s.notes[lang] || s.notes.fr) : '';
+
+// ---------- Météo (Open-Meteo) ----------
+const forecasts = {}; // id -> {fetchedAt, hours:[scored], sun}
+const loading = new Set();
+const errors = {};
+
+function parseLocal(str, offset) {
+  const [d, tm] = str.split('T'); const [y, m, dd] = d.split('-').map(Number); const [hh, mi] = tm.split(':').map(Number);
+  return new Date(Date.UTC(y, m - 1, dd, hh, mi) - offset * 1000);
+}
+
+async function fetchSpot(s) {
+  const q = `latitude=${s.lat.toFixed(4)}&longitude=${s.lon.toFixed(4)}&timezone=auto&forecast_days=3`;
+  const fUrl = `https://api.open-meteo.com/v1/forecast?${q}&wind_speed_unit=kmh&daily=sunrise,sunset&hourly=temperature_2m,wind_speed_10m,wind_direction_10m,wind_gusts_10m,precipitation_probability,precipitation,pressure_msl,cloud_cover`;
+  const mUrl = `https://marine-api.open-meteo.com/v1/marine?${q}&hourly=wave_height,wave_period,sea_surface_temperature`;
+  const [fr, mr] = await Promise.allSettled([fetch(fUrl).then(r => { if (!r.ok) throw 0; return r.json(); }), fetch(mUrl).then(r => { if (!r.ok) throw 0; return r.json(); })]);
+  if (fr.status !== 'fulfilled') throw new Error('forecast');
+  const f = fr.value, off = f.utc_offset_seconds || 0, H = f.hourly;
+  const mar = {};
+  if (mr.status === 'fulfilled' && mr.value.hourly) {
+    const M = mr.value.hourly;
+    M.time.forEach((tm, i) => mar[tm] = {wave: M.wave_height?.[i] ?? null, period: M.wave_period?.[i] ?? null, sea: M.sea_surface_temperature?.[i] ?? null});
+  }
+  const hours = H.time.map((tm, i) => ({
+    date: parseLocal(tm, off), temp: H.temperature_2m[i], wind: H.wind_speed_10m[i], dir: H.wind_direction_10m[i], gust: H.wind_gusts_10m[i],
+    pprob: H.precipitation_probability[i], precip: H.precipitation[i], pres: H.pressure_msl[i], cloud: H.cloud_cover[i],
+    wave: mar[tm]?.wave ?? null, period: mar[tm]?.period ?? null, sea: mar[tm]?.sea ?? null,
+  }));
+  const sun = f.daily.sunrise.map((r, i) => ({rise: parseLocal(r, off), set: parseLocal(f.daily.sunset[i], off)}));
+  return {hours, sun};
+}
+
+async function loadSpot(s, force = false) {
+  const ex = forecasts[s.id];
+  if (!force && ex && Date.now() - ex.fetchedAt < 30 * 60 * 1000) return;
+  if (loading.has(s.id)) return;
+  loading.add(s.id); updateLoading();
+  try {
+    const {hours, sun} = await fetchSpot(s);
+    forecasts[s.id] = {fetchedAt: Date.now(), hours: scoreHours(hours, sun, s), sun};
+    delete errors[s.id];
+  } catch (e) { errors[s.id] = true; }
+  loading.delete(s.id); updateLoading();
+  refreshAll();
+}
+const loadAll = (force = false) => Promise.all(allSpots().map(s => loadSpot(s, force)));
+function updateLoading() { document.getElementById('refresh').textContent = loading.size ? '⏳' : '↻'; }
+
+// ---------- Indice de pêche ----------
+const inRange = (d, a, b) => d >= a && d <= b;
+function timeOfDay(date, sun) {
+  for (const s of sun) if (Math.abs(date - s.rise) <= 5400e3 || Math.abs(date - s.set) <= 5400e3) return 'dawnDusk';
+  for (const s of sun) if (date > s.rise && date < s.set) return 'day';
+  return 'night';
+}
+function scoreHours(hours, sun, spot) {
+  return hours.map((h, i) => {
+    let s = 50; const f = []; const add = (v, key, pos) => { s += v; f.push({key, pos}); };
+    if (h.wind != null) {
+      if (h.wind < 10) add(15, 'f.wind.calm', 1); else if (h.wind < 20) add(8, 'f.wind.light', 1);
+      else if (h.wind < 30) add(-5, 'f.wind.moderate', 0); else if (h.wind < 40) add(-20, 'f.wind.strong', 0); else add(-40, 'f.wind.veryStrong', 0);
+    }
+    if (h.gust != null && h.gust > 50) add(-15, 'f.gusts', 0);
+    if (h.wind != null && h.dir != null && h.wind >= 20) {
+      const east = inRange(h.dir, 45, 135), west = inRange(h.dir, 225, 315);
+      if (east && spot.coast === 'mediterranean') add(-10, 'f.chergui.exposed', 0);
+      if (west && spot.coast === 'atlantic') add(-10, 'f.gharbi.exposed', 0);
+      if ((east && spot.coast === 'atlantic') || (west && spot.coast === 'mediterranean')) add(5, 'f.wind.sheltered', 1);
+    }
+    if (h.wave != null) {
+      if (h.wave > 2.5) add(-30, 'f.waves.danger', 0); else if (h.wave >= 1.5) add(-5, 'f.waves.rough', 0);
+      else if (h.wave >= 0.5) add(spot.type === 'jetty' ? 5 : 15, 'f.waves.ideal', 1); else add(5, 'f.waves.calm', 1);
+    }
+    if (i >= 3 && h.pres != null && hours[i - 3].pres != null) {
+      const d = h.pres - hours[i - 3].pres;
+      if (d <= -0.5 && d >= -3) add(10, 'f.pressure.falling', 1); else if (d < -3) add(-5, 'f.pressure.dropFast', 0);
+      else if (d > 2) add(-5, 'f.pressure.rising', 0); else add(3, 'f.pressure.stable', 1);
+    }
+    const tod = timeOfDay(h.date, sun);
+    if (tod === 'dawnDusk') add(15, 'f.light.golden', 1);
+    else if (tod === 'night') add(3, 'f.light.night', 1);
+    else if (h.cloud != null && h.cloud > 60) add(5, 'f.cloudy', 1);
+    else if ((h.cloud ?? 0) < 30) add(-5, 'f.light.harsh', 0);
+    if (h.precip != null) { if (h.precip > 2) add(-10, 'f.rain.heavy', 0); else if (h.precip > 0.1) add(2, 'f.rain.light', 1); }
+    const ill = moonIllum(h.date); if (ill < 0.1 || ill > 0.9) add(5, 'f.moon.spring', 1);
+    const dangerous = (h.wave ?? 0) > 2.5 || (h.gust ?? 0) > 60;
+    let score = Math.round(Math.max(0, Math.min(100, s))); if (dangerous) score = Math.min(score, 20);
+    return {c: h, score, factors: f, dangerous};
+  });
+}
+const THRESHOLD = 65;
+function windows(hours, within = 72) {
+  const now = Date.now(), res = []; let cur = [];
+  const flush = () => { if (!cur.length) return; const sc = cur.map(x => x.score);
+    res.push({start: cur[0].c.date, end: new Date(+cur[cur.length - 1].c.date + 3600e3), avg: Math.round(sc.reduce((a, b) => a + b, 0) / sc.length)}); cur = []; };
+  for (const h of hours) {
+    if (h.c.date < now - 3600e3 || h.c.date > now + within * 3600e3) continue;
+    if (h.score >= THRESHOLD && !h.dangerous) cur.push(h); else flush();
+  }
+  flush();
+  return res.sort((a, b) => b.avg - a.avg);
+}
+const currentHour = s => forecasts[s.id]?.hours.find(h => +h.c.date + 3600e3 > Date.now());
+function contextTips(h, spot) {
+  const out = [], c = h.c, has = k => h.factors.some(f => f.key === k);
+  if (h.dangerous) out.push('ctx.danger');
+  if (c.wind >= 30) out.push('ctx.wind.strong');
+  if (c.wind >= 20 && c.dir != null) { if (inRange(c.dir, 45, 135)) out.push('ctx.chergui'); else if (inRange(c.dir, 225, 315)) out.push('ctx.gharbi'); }
+  if (c.wave != null && !h.dangerous) { if (c.wave >= 0.5 && c.wave < 1.5) out.push('ctx.waves.ideal'); else if (c.wave < 0.5) out.push('ctx.waves.calm'); }
+  if (has('f.pressure.falling')) out.push('ctx.pressure.falling');
+  if (has('f.light.golden')) out.push('ctx.golden');
+  if (has('f.light.night') && spot.species.includes('squid')) out.push('ctx.night');
+  if (has('f.cloudy')) out.push('ctx.cloudy');
+  if (has('f.light.harsh')) out.push('ctx.sunny');
+  if (c.sea != null && c.sea < 15) out.push('ctx.coldWater');
+  if (!out.length) out.push('ctx.default');
+  return out;
+}
+
+// ---------- Lune ----------
+const SYN = 29.530588853, REF = Date.UTC(2000, 0, 6, 18, 14);
+function moonPhase(d) { let p = ((d - REF) / 864e5 % SYN) / SYN; return p < 0 ? p + 1 : p; }
+function moonIllum(d) { return (1 - Math.cos(2 * Math.PI * moonPhase(d))) / 2; }
+function moonInfo(d) {
+  const p = moonPhase(d);
+  const tab = [[0.03,'moon.new','🌑'],[0.22,'moon.waxingCrescent','🌒'],[0.28,'moon.firstQuarter','🌓'],[0.47,'moon.waxingGibbous','🌔'],[0.53,'moon.full','🌕'],[0.72,'moon.waningGibbous','🌖'],[0.78,'moon.lastQuarter','🌗'],[0.97,'moon.waningCrescent','🌘'],[1.01,'moon.new','🌑']];
+  const e = tab.find(x => p < x[0]); return {key: e[1], icon: e[2]};
+}
+
+// ---------- Formatage ----------
+const loc = () => lang === 'ar' ? 'ar-MA' : 'fr-FR';
+const fmtTime = d => d.toLocaleTimeString(loc(), {hour: '2-digit', minute: '2-digit', hour12: false});
+function fmtDay(d) {
+  const a = new Date(); a.setHours(0, 0, 0, 0); const b = new Date(d); b.setHours(0, 0, 0, 0);
+  const diff = Math.round((b - a) / 864e5);
+  if (diff === 0) return t('day.today'); if (diff === 1) return t('day.tomorrow');
+  return d.toLocaleDateString(loc(), {weekday: 'long', day: 'numeric', month: 'short'});
+}
+const fmtRange = w => `${fmtDay(w.start)} · ${fmtTime(w.start)} – ${fmtTime(w.end)}`;
+const num = (v, u, dg = 0) => v == null ? '—' : `${(+v).toFixed(dg)} ${u}`;
+const cardinal = d => d == null ? '' : t('dir.' + ['N','NE','E','SE','S','SW','W','NW'][Math.round(((d % 360) / 45)) % 8]);
+const cls = s => s == null ? 'n' : s >= 65 ? 'g' : s >= 45 ? 'o' : 'r';
+const color = s => s == null ? '#9ca3af' : s >= 65 ? '#16a34a' : s >= 45 ? '#ea8a0c' : '#dc2626';
+const labelKey = s => s >= 65 ? 'score.good' : s >= 45 ? 'score.medium' : 'score.bad';
+const badge = s => `<span class="badge ${cls(s)}">${s}/100</span>`;
+
+// ---------- Carte ----------
+let map, markers = {}, addMode = false;
+function initMap() {
+  map = L.map('map', {zoomControl: false, attributionControl: true}).setView([35.70, -5.80], 10);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom: 18, attribution: '© OpenStreetMap'}).addTo(map);
+  ZONES.forEach(z => L.circle([z.lat, z.lon], {radius: z.r, color: '#dc2626', weight: 1.5, fillOpacity: 0.18})
+    .addTo(map).bindTooltip(() => '⛔ ' + t('map.restricted')));
+  renderMarkers();
+}
+function renderMarkers() {
+  Object.values(markers).forEach(m => m.remove()); markers = {};
+  allSpots().forEach(s => {
+    const h = currentHour(s), sc = h ? h.score : null;
+    const icon = L.divIcon({className: '', iconSize: [34, 34], iconAnchor: [17, 17],
+      html: `<div class="pin" style="background:${color(sc)}">${s.custom ? '⭐' : '🐟'}${sc != null ? `<b>${sc}</b>` : ''}</div>`});
+    markers[s.id] = L.marker([s.lat, s.lon], {icon}).addTo(map).bindTooltip(esc(spotName(s)), {direction: 'top', offset: [0, -16]})
+      .on('click', () => openSpot(s.id));
+  });
+}
+function renderLegend() {
+  document.getElementById('legend').innerHTML = [['#16a34a','score.good'],['#ea8a0c','score.medium'],['#dc2626','score.bad']]
+    .map(([c, k]) => `<span><i class="dot" style="background:${c}"></i>${t(k)}</span>`).join('');
+}
+function setAddMode(on) {
+  addMode = on;
+  document.getElementById('cross').style.display = on ? 'block' : 'none';
+  document.getElementById('legend').style.display = on ? 'none' : 'flex';
+  const bar = document.getElementById('addbar');
+  bar.style.display = on ? 'block' : 'none';
+  bar.innerHTML = `<div class="sub" style="margin-bottom:8px">${t('map.addHint')}</div><button class="btn" onclick="openAddForm()">📍 ${t('map.addHere')}</button>`;
+  document.getElementById('addbtn').textContent = on ? '✕' : '＋';
+}
+
+// ---------- Fiche spot ----------
+let openId = null;
+function openSpot(id) { openId = id; const s = allSpots().find(x => x.id === id); loadSpot(s); renderSheet(); document.getElementById('sheet').classList.add('open'); }
+function closeSheet() { openId = null; document.getElementById('sheet').classList.remove('open'); }
+function chartSVG(hours) {
+  const W = 340, Hh = 140, pad = 22, n = hours.length; if (!n) return '';
+  const x0 = +hours[0].c.date, x1 = +hours[n - 1].c.date, X = d => pad + (W - pad - 6) * (d - x0) / (x1 - x0), Y = v => 8 + (Hh - 30) * (1 - v / 100);
+  const pts = hours.map(h => `${X(+h.c.date).toFixed(1)},${Y(h.score).toFixed(1)}`).join(' ');
+  const now = Date.now(), nowX = now >= x0 && now <= x1 ? X(now) : null;
+  let ticks = ''; hours.forEach(h => { if (h.c.date.getHours() === 0) ticks += `<line x1="${X(+h.c.date)}" x2="${X(+h.c.date)}" y1="8" y2="${Hh - 22}" stroke="#8884"/><text x="${X(+h.c.date) + 3}" y="${Hh - 8}">${h.c.date.toLocaleDateString(loc(), {weekday: 'short'})}</text>`; });
+  return `<svg viewBox="0 0 ${W} ${Hh}" width="100%" dir="ltr">
+    <defs><linearGradient id="gr" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#16a34a" stop-opacity=".4"/><stop offset="1" stop-color="#16a34a" stop-opacity="0"/></linearGradient></defs>
+    ${ticks}
+    <text x="2" y="${Y(100) + 4}">100</text><text x="2" y="${Y(THRESHOLD) + 4}">${THRESHOLD}</text><text x="8" y="${Y(0) + 4}">0</text>
+    <line x1="${pad}" x2="${W}" y1="${Y(THRESHOLD)}" y2="${Y(THRESHOLD)}" stroke="#ea8a0c" stroke-dasharray="4"/>
+    <polygon points="${X(x0)},${Y(0)} ${pts} ${X(x1)},${Y(0)}" fill="url(#gr)"/>
+    <polyline points="${pts}" fill="none" stroke="#16a34a" stroke-width="2"/>
+    ${nowX ? `<line x1="${nowX}" x2="${nowX}" y1="8" y2="${Hh - 22}" stroke="#888" stroke-width="1.5"/>` : ''}
+  </svg>`;
+}
+function renderSheet() {
+  if (!openId) return;
+  const s = allSpots().find(x => x.id === openId); if (!s) return closeSheet();
+  const f = forecasts[s.id], h = currentHour(s);
+  let html = `<div class="sheethead"><h2>${esc(spotName(s))}</h2><button class="iconbtn" onclick="closeSheet()">✕</button></div>
+    <div class="card"><div class="sub">${TYPE_ICON[s.type]} ${t('spot.type.' + s.type)} · ${t('coast.' + s.coast)}</div>
+    ${spotNotes(s) ? `<p style="margin:8px 0">${esc(spotNotes(s))}</p>` : ''}
+    ${s.species.length ? `<div class="sub">${t('detail.species')} : ${s.species.map(x => t('species.' + x)).join(lang === 'ar' ? '، ' : ', ')}</div>` : ''}</div>`;
+  if (f && h) {
+    const c = h.c, m = moonInfo(c.date), ws = windows(f.hours);
+    if (h.dangerous) html += `<div class="card danger">⚠️ ${t('detail.danger')}</div>`;
+    html += `<div class="card"><h3>${t('detail.now')}</h3>
+      <div class="score"><div class="ring" style="border:6px solid ${color(h.score)};color:${color(h.score)}">${h.score}</div>
+      <div><div class="sub">${t('detail.score')}</div><div style="font-size:20px;font-weight:700;color:${color(h.score)}">${t(labelKey(h.score))}</div></div></div>
+      <div class="grid">
+        ${cell('🌡️', t('detail.temp'), num(c.temp, '°C'))}
+        ${cell(`<span style="display:inline-block;transform:rotate(${c.dir || 0}deg)">⬇︎</span>`, t('detail.wind'), num(c.wind, 'km/h') + ' ' + cardinal(c.dir))}
+        ${cell('💨', t('detail.gusts'), num(c.gust, 'km/h'))}
+        ${cell('🌊', t('detail.waves'), num(c.wave, 'm', 1))}
+        ${cell('⏱️', t('detail.period'), num(c.period, 's'))}
+        ${cell('💧', t('detail.seaTemp'), num(c.sea, '°C', 1))}
+        ${cell('🧭', t('detail.pressure'), num(c.pres, 'hPa'))}
+        ${cell('🌧️', t('detail.rain'), num(c.pprob, '%'))}
+        ${cell(m.icon, t('detail.moon'), t(m.key))}
+      </div></div>
+      <div class="card"><h3>${t('detail.factors')}</h3>${h.factors.map(x => `<div class="fac" style="color:${x.pos ? 'var(--green)' : 'var(--red)'}">${x.pos ? '＋' : '−'} ${t(x.key)}</div>`).join('')}</div>
+      <div class="card"><h3>${t('detail.forecast')}</h3>${chartSVG(f.hours)}</div>
+      <div class="card"><h3>${t('detail.windows')}</h3>${ws.length ? ws.slice(0, 5).map(w => `<div class="row"><span>🕒</span><div class="grow">${fmtRange(w)}</div>${badge(w.avg)}</div>`).join('') : `<div class="sub">${t('detail.noWindow')}</div>`}</div>
+      <div class="card"><h3>${t('detail.tips')}</h3>${contextTips(h, s).map(k => `<div class="row"><span>💡</span><div class="grow" style="font-size:14px">${t(k)}</div></div>`).join('')}</div>`;
+  } else if (errors[s.id]) {
+    html += `<div class="card"><p>${t('detail.error')}</p><button class="btn sec" onclick="retry('${s.id}')">${t('detail.retry')}</button></div>`;
+  } else {
+    html += `<div class="card">⏳ ${t('detail.loading')}</div>`;
+  }
+  html += `<a class="btn" href="https://maps.apple.com/?daddr=${s.lat},${s.lon}&dirflg=d" target="_blank" rel="noopener">🚗 ${t('detail.directions')}</a>`;
+  html += `<a class="btn sec" style="margin-top:8px" href="https://www.google.com/maps/dir/?api=1&destination=${s.lat},${s.lon}" target="_blank" rel="noopener">Google Maps</a>`;
+  if (s.custom) html += `<button class="btn del" style="margin-top:8px" onclick="deleteSpot('${s.id}')">🗑️ ${t('detail.delete')}</button>`;
+  document.getElementById('sheet').innerHTML = html;
+}
+const cell = (ic, l, v) => `<div class="cell"><div class="ic">${ic}</div><div class="v">${esc(v)}</div><div class="l">${l}</div></div>`;
+function retry(id) { delete errors[id]; renderSheet(); loadSpot(allSpots().find(x => x.id === id), true); }
+function deleteSpot(id) { custom = custom.filter(x => x.id !== id); LS.set('customSpots', custom); delete forecasts[id]; closeSheet(); refreshAll(); }
+
+// ---------- Ajout de spot ----------
+function openAddForm() {
+  const c = map.getCenter();
+  document.getElementById('addsheet').innerHTML = `<div class="sheethead"><h2>${t('add.title')}</h2><button class="iconbtn" onclick="closeAdd()">✕</button></div>
+  <form class="card" id="addform">
+    <label class="f">${t('add.namePlaceholder')}</label><input type="text" id="a-name" required>
+    <label class="f">${t('add.type')}</label><select id="a-type">${TYPES.map(x => `<option value="${x}">${t('spot.type.' + x)}</option>`).join('')}</select>
+    <label class="f">${t('add.coast')}</label><select id="a-coast">${COASTS.map(x => `<option value="${x}">${t('coast.' + x)}</option>`).join('')}</select>
+    <label class="f">${t('detail.species')}</label>${SPECIES.map(x => `<label class="chk"><input type="checkbox" value="${x}"> ${t('species.' + x)}</label>`).join('')}
+    <div class="sub" dir="ltr" style="margin:10px 0">${c.lat.toFixed(4)}, ${c.lng.toFixed(4)}</div>
+    <button class="btn" type="submit">${t('add.save')}</button>
+  </form>`;
+  document.getElementById('addsheet').classList.add('open');
+  document.getElementById('addform').addEventListener('submit', e => {
+    e.preventDefault();
+    const name = document.getElementById('a-name').value.trim(); if (!name) return;
+    const s = {id: 'c' + Date.now(), name: {fr: name, ar: name}, lat: c.lat, lon: c.lng, custom: true,
+      type: document.getElementById('a-type').value, coast: document.getElementById('a-coast').value,
+      species: [...document.querySelectorAll('#addform input[type=checkbox]:checked')].map(x => x.value)};
+    custom.push(s); LS.set('customSpots', custom); closeAdd(); setAddMode(false); refreshAll(); loadSpot(s);
+  });
+}
+function closeAdd() { document.getElementById('addsheet').classList.remove('open'); }
+
+// ---------- Onglets ----------
+const TABS = [['map', '🗺️', 'tab.map'], ['when', '🕒', 'tab.when'], ['tips', '💡', 'tab.tips'], ['settings', '⚙️', 'tab.settings']];
+let tab = 'map';
+function renderTabs() {
+  document.getElementById('tabs').innerHTML = TABS.map(([id, ic, k]) => `<button class="${tab === id ? 'active' : ''}" onclick="go('${id}')"><span>${ic}</span>${t(k)}</button>`).join('');
+}
+function go(id) {
+  tab = id; document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.id === 'view-' + id));
+  renderTabs(); if (id === 'map') setTimeout(() => map.invalidateSize(), 50);
+}
+function renderWhen() {
+  const ranked = allSpots().map(s => ({s, w: forecasts[s.id] ? windows(forecasts[s.id].hours, 48)[0] : null}))
+    .sort((a, b) => (b.w?.avg ?? -1) - (a.w?.avg ?? -1));
+  const top = ranked[0];
+  let html = '';
+  if (top && top.w) html += `<div class="card" onclick="openSpot('${top.s.id}')" style="cursor:pointer"><h3>🏆 ${t('best.top')}</h3>
+    <div style="font-size:20px;font-weight:700">${esc(spotName(top.s))}</div><div style="margin:6px 0">🕒 ${fmtRange(top.w)}</div>${badge(top.w.avg)}</div>`;
+  html += `<div class="card"><h3>${t('best.ranking')}</h3>${ranked.map(({s, w}) => `<div class="row" onclick="openSpot('${s.id}')" style="cursor:pointer">
+    <div class="grow"><div>${esc(spotName(s))}</div><div class="sub">${w ? fmtRange(w) : t(forecasts[s.id] ? 'best.none' : 'detail.loading')}</div></div>${w ? badge(w.avg) : ''}<span class="sub">›</span></div>`).join('')}</div>
+    <div class="sub" style="padding:0 6px">${t('best.footer')}</div>`;
+  document.getElementById('view-when').innerHTML = html;
+}
+function renderTips() {
+  document.getElementById('view-tips').innerHTML = `
+    <div class="card"><h3>${t('tips.reading.title')}</h3>${t('tips.reading.text')}</div>
+    <div class="card"><h3>${t('tips.species.title')}</h3>${SPECIES.map(x => `<details><summary>${x === 'squid' ? '🦑' : '🐟'} ${t('species.' + x)}</summary><p>${t('tip.' + x)}</p></details>`).join('')}</div>
+    <div class="card"><h3>🌬️ ${t('tips.wind.title')}</h3>${t('tips.wind.text')}</div>
+    <div class="card"><h3>🎣 ${t('tips.gear.title')}</h3>${t('tips.gear.text')}</div>
+    <div class="card"><h3>🦺 ${t('tips.safety.title')}</h3>${t('tips.safety.text')}</div>
+    <div class="card"><h3>📜 ${t('tips.rules.title')}</h3>${t('tips.rules.text')}</div>`;
+}
+function renderSettings() {
+  document.getElementById('view-settings').innerHTML = `
+    <div class="card"><h3>${t('settings.language')}</h3><div class="seg">
+      <button class="${lang === 'fr' ? 'on' : ''}" onclick="setLang('fr')">Français</button>
+      <button class="${lang === 'ar' ? 'on' : ''}" onclick="setLang('ar')">العربية</button></div></div>
+    <div class="card"><h3>📲 ${t('install.title')}</h3>${t('install.text')}</div>
+    <div class="card"><h3>${t('settings.about')}</h3><p>${t('settings.aboutText')}</p><p class="sub">${t('settings.data')}</p><p class="sub">${t('settings.disclaimer')}</p></div>
+    ${custom.length ? `<button class="btn del" onclick="resetCustom()">${t('settings.resetCustom')}</button>` : ''}`;
+}
+function resetCustom() { custom = []; LS.set('customSpots', custom); refreshAll(); }
+function setLang(l) {
+  lang = l; LS.set('lang', l);
+  document.documentElement.lang = l; document.documentElement.dir = l === 'ar' ? 'rtl' : 'ltr';
+  document.getElementById('langbtn').textContent = l === 'ar' ? 'FR' : 'ع';
+  document.getElementById('title').textContent = '🎣 ' + (l === 'ar' ? 'صيد طنجة' : 'Pêche Tanger');
+  renderLegend(); setAddMode(addMode); refreshAll();
+}
+function refreshAll() { renderMarkers(); renderTabs(); renderWhen(); renderTips(); renderSettings(); renderSheet(); }
+
+// ---------- Démarrage ----------
+initMap();
+setLang(lang);
+document.getElementById('langbtn').onclick = () => setLang(lang === 'ar' ? 'fr' : 'ar');
+document.getElementById('refresh').onclick = () => loadAll(true);
+document.getElementById('addbtn').onclick = () => setAddMode(!addMode);
+let meMarker;
+document.getElementById('locate').onclick = () => {
+  if (!navigator.geolocation) return;
+  navigator.geolocation.getCurrentPosition(p => {
+    const ll = [p.coords.latitude, p.coords.longitude];
+    if (meMarker) meMarker.remove();
+    meMarker = L.circleMarker(ll, {radius: 8, color: '#fff', weight: 3, fillColor: '#2563eb', fillOpacity: 1}).addTo(map);
+    map.setView(ll, 12);
+  }, () => {}, {enableHighAccuracy: true, timeout: 10000});
+};
+loadAll();
+setInterval(() => loadAll(), 30 * 60 * 1000);
+</script>
+</body>
+</html>

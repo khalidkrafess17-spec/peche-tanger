@@ -84,7 +84,9 @@ svg text{fill:var(--muted);font-size:10px}
 .seastate{font-size:18px;font-weight:700;margin-bottom:8px}
 .kv{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--line);font-size:14px}
 .kv:last-child{border:0}
-.techlink{color:var(--accent);font-weight:600;text-decoration:none;border-bottom:1px dotted var(--accent)}
+.techlink{color:#007aff !important;font-weight:600;text-decoration:underline;text-decoration-color:#007aff66;text-underline-offset:3px}
+.techlink b,.techlink *{color:#007aff !important}
+@media (prefers-color-scheme:dark){.techlink,.techlink *{color:#0a84ff !important}}
 .mapsel{position:absolute;top:12px;left:12px;z-index:500;max-width:62%;padding:9px 10px;border-radius:12px;border:0;background:var(--card);color:var(--text);font-size:15px;box-shadow:0 2px 8px #0004}
 [dir=rtl] .mapsel{left:auto;right:12px}
 .filters{display:flex;gap:8px;margin-bottom:12px}.filters select{flex:1;font-size:15px;padding:9px}
